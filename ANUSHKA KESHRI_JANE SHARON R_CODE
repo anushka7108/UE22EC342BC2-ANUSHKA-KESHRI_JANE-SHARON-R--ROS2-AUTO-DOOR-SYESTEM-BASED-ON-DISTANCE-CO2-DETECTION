@@ -1,0 +1,60 @@
+Const int co2Threshold = 350
+;    // New CO₂ crowd threshold
+const int personDistance = 10;   // Person detection distance in cm
+
+Servo doorServo;
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  doorServo.attach(servoPin);
+  doorServo.write(0); // Door starts closed
+
+  Serial.println("Automatic Door System Ready");
+}
+
+void loop() {
+  // 1. Read CO₂ level
+  int co2Value = analogRead(mq135Pin);
+  Serial.print("🌫 CO₂ Level: ");
+  Serial.println(co2Value);
+
+  // 2. Check CO₂ crowd condition
+  if (co2Value >= co2Threshold) {
+    Serial.println(" Too many people, can’t enter!");
+    doorServo.write(0); // Force door closed
+  } else {
+    // 3. Measure distance using ultrasonic
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout
+    float distance = duration * 0.0343 / 2;
+
+    if (duration == 0) {
+      Serial.println(" Ultrasonic timeout (no object)");
+      distance = -1;
+    } else {
+      Serial.print("📏 Distance: ");
+      Serial.print(distance);
+      Serial.println(" cm");
+    }
+
+    // 4. Open or close door based on distance
+    if (distance > 0 && distance <= personDistance) {
+      Serial.println("Person detected. Opening door...");
+      doorServo.write(90); // Open door
+    } else {
+      Serial.println("No one nearby. Door remains closed.");
+      doorServo.write(0); // Close door
+    }
+  }
+
+  delay(1000); // 1 second delay
+}
